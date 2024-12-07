@@ -1,0 +1,5 @@
+channels = ["conda-forge"]
+
+[deps]
+ase = ">=3.22,<4"
+scikit-learn = ">=1,<2"

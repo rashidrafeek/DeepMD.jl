@@ -1,8 +1,8 @@
 module DeepMD
 
 using PythonCall
-using AtomsBase: AbstractSystem, Periodic, AtomView, element
-import AtomsBase: bounding_box, boundary_conditions, atomic_symbol, velocity,
+using AtomsBase: AbstractSystem, AtomView, element
+import AtomsBase: cell_vectors, periodicity, atomic_symbol, velocity,
                   atomic_number, atomic_mass, species_type, atomkeys, hasatomkey
 using Unitful: @u_str, ustrip
 using StatsBase: sample
@@ -41,13 +41,13 @@ struct DPLabeledSystem <: AbstractSystem{3}
     end
 end
 
-function bounding_box(lssys::DPLabeledSystem)
+function cell_vectors(lssys::DPLabeledSystem)
     ls = lssys.ls
     cellvecs = pyconvert(Vector{Vector{Float64}}, ls.data["cells"][0]) .* u"Å"
 
     return cellvecs
 end
-boundary_conditions(::DPLabeledSystem) = repeat([Periodic()], 3)
+periodicity(::DPLabeledSystem) = (true, true, true)
 Base.length(lssys::DPLabeledSystem) = length(lssys.ls.data["coords"][0])
 Base.size(lssys::DPLabeledSystem) = (length(lssys),)
 
@@ -90,10 +90,10 @@ velocity(::DPLabeledSystem) = missing
 # System property access
 function Base.getindex(lssys::DPLabeledSystem, x::Symbol)
     ls = lssys.ls
-    if x === :bounding_box
-        bounding_box(lssys)
-    elseif x === :boundary_conditions
-        boundary_conditions(lssys)
+    if x === :cell_vectors
+        cell_vectors(lssys)
+    elseif x === :periodicity
+        periodicity(lssys)
     elseif x === :energy
         pyconvert(Float64, ls.data["energies"][0]) * u"eV"
     elseif x === :force
@@ -105,10 +105,10 @@ function Base.getindex(lssys::DPLabeledSystem, x::Symbol)
     end
 end
 Base.haskey(::DPLabeledSystem, x::Symbol) = x in (
-    :bounding_box, :boundary_conditions, :energy, :force, :virial
+    :cell_vectors, :periodicity, :energy, :force, :virial
 )
 Base.keys(::DPLabeledSystem) = (
-    :bounding_box, :boundary_conditions, :energy, :force, :virial
+    :cell_vectors, :periodicity, :energy, :force, :virial
 )
 
 # Atom and atom property access
@@ -136,7 +136,7 @@ end
 Get all data to create a dpdata System object from an AbstractSystem.
 """
 function _getdpsystemdata(system::AbstractSystem)
-    cell = np.array(stack(map(bounding_box(system)) do vec
+    cell = np.array(stack(map(cell_vectors(system)) do vec
         ustrip.(u"Å", vec)
     end; dims=1))
     coords = np.array(stack(map(position(system)) do vec

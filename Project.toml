@@ -1,15 +1,17 @@
 name = "DeepMD"
 uuid = "a956bb7e-989c-45fb-9196-43807e1c0522"
 authors = ["Rashid Rafeek <rashidrafeek@gmail.com> and contributors"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 AtomsBase = "a963bdd2-2df7-4f54-a1ee-49d51e6be12a"
+CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
 PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [compat]
+AtomsBase = "0.5"
 julia = "1"
 
 [extras]
