@@ -7,13 +7,13 @@ export DeepPotential
 struct DeepPotential
     dp::Py
     function DeepPotential(dp::Py; assert=true)
-        if !pyisinstance(dp, DeepPot)
+        if !pyisinstance(dp, DeepPotPy)
             error("Given potential is not a valid `DeepPot` and has type $(pytype(dp)).")
         end
         new(dp)
     end
 end
-DeepPotential(path::String) = DeepPotential(DeepPot(path))
+DeepPotential(path::String) = DeepPotential(DeepPotPy(path))
 
 #
 # Functions
