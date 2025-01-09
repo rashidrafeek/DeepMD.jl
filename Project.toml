@@ -7,11 +7,13 @@ version = "0.1.2"
 AtomsBase = "a963bdd2-2df7-4f54-a1ee-49d51e6be12a"
 CondaPkg = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
 PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
 
 [compat]
 AtomsBase = "0.5"
+StaticArrays = "1"
 julia = "1"
 
 [extras]
