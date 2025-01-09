@@ -24,7 +24,8 @@ function predict_data(sys::AbstractSystem, deeppot::DeepPotential)
 
     coord = stack(ustrip.(position(sys)))'
     cell = stack(ustrip.(cell_vectors(sys)))'
-    atype = findfirst.(.==(atomic_symbol(sys)), Ref(type_map)) .- 1
+    symbols = Symbol.(atomic_symbol(sys))
+    atype = findfirst.(.==(symbols), Ref(type_map)) .- 1
 
     energy, force, virial_stress = deeppot.dp.eval(coord, cell, atype)
 end
