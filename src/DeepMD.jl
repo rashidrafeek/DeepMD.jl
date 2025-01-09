@@ -5,9 +5,10 @@ using AtomsBase: AbstractSystem, AtomView, element
 import AtomsBase: cell_vectors, periodicity, atomic_symbol, velocity,
                   atomic_number, atomic_mass, atomkeys, hasatomkey
 using Unitful: @u_str, ustrip, uconvert
+import UnitfulAtomic
 using StatsBase: sample
 using StaticArrays: SVector, @SVector
-# Not compatible with AtomsBase
+# Not compatible with AtomsBase 0.5
 # using InteratomicPotentials: AbstractPotential               
 # import InteratomicPotentials: energy_and_force, virial_stress
 
@@ -27,14 +28,17 @@ function __init__()
     PythonCall.pycopy!(np, pyimport("numpy"))
     PythonCall.pycopy!(pycolon, pyslice(pybuiltins.None, pybuiltins.None, pybuiltins.None))
     PythonCall.pycopy!(DeepPotPy, pyimport("deepmd.infer").DeepPot)
-    pyimport("deepmd.infer") # So that deepmd.infer.DeepPot works
 end
 
 export deepmd, dpdata
-export DPLabeledSystem
-export getdpsystem
 
+export DPLabeledSystem
 include("atomsbase.jl")
+
+export getdpsystem
 include("utils.jl")
+
+export DeepPotential
+include("potential.jl")
 
 end
