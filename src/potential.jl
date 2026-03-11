@@ -22,8 +22,8 @@ DeepPotential(path::String) = DeepPotential(DeepPotPy(path))
 function predict_data(sys::AbstractSystem, deeppot::DeepPotential)
     type_map = pyconvert(Vector{Symbol}, deeppot.dp.get_type_map())
 
-    coord = stack(ustrip.(position(sys)))'
-    cell = stack(ustrip.(cell_vectors(sys)))'
+    coord = stack(ustrip.(position(sys)); dims=1)
+    cell = stack(ustrip.(cell_vectors(sys)); dims=1)
     symbols = Symbol.(atomic_symbol(sys))
     atype = findfirst.(.==(symbols), Ref(type_map)) .- 1
 
