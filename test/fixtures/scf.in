@@ -1,0 +1,26 @@
+&CONTROL
+ calculation = 'scf',
+/
+&SYSTEM
+ ibrav = 0,
+ nat = 3,
+ ntyp = 2,
+ ecutwfc = 30,
+/
+&ELECTRONS
+/
+ATOMIC_SPECIES
+H 1.008 H.UPF
+O 15.999 O.UPF
+
+CELL_PARAMETERS angstrom
+10 0 0
+1 10 0
+0 0 10
+
+ATOMIC_POSITIONS angstrom
+H 0 0 0
+O 1 0 0
+H 0 1 0
+
+K_POINTS gamma

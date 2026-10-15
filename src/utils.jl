@@ -76,94 +76,56 @@ function getdpsystem(systems::AbstractVector{<:AbstractSystem})
     return dpsys
 end
 
-function getlabeledsystemdp_qescf(
-        outname; inname=replace(outname, "out"=>"in")
-    )
-    outlines = readlines(outname)
-    inlines = readlines(inname)
-    fmtobj = dpdata.system.load_format("qe/pw/scf")
-    
-    cell = aseio.read(inname).cell[]
-    atom_names, natoms, types, coords = dpdata.qe.scf.get_coords(inlines, cell)
-    energy = dpdata.qe.scf.get_energy(outlines)
-    force = dpdata.qe.scf.get_force(outlines, natoms)
-    stress = dpdata.qe.scf.get_stress(outlines) * np.linalg.det(cell)
-
-    data = pydict()
-    (
-            data["atom_names"],
-            data["atom_numbs"],
-            data["atom_types"],
-            data["cells"],
-            data["coords"],
-            data["energies"],
-            data["forces"],
-            data["virials"],
-    ) = (
-        atom_names,
-        natoms,
-        types,
-        cell[np.newaxis, pycolon, pycolon],
-        coords[np.newaxis, pycolon, pycolon],
-        np.array(energy)[np.newaxis],
-        force[np.newaxis, pycolon, pycolon],
-        stress[np.newaxis, pycolon, pycolon],
-    )
-
-    ls = dpdata.LabeledSystem()
-    ls.data.update(data)
-    ls.check_data()
-    if pyhasattr(fmtobj.from_labeled_system, "post_func")
-        for post_f in fmtobj.from_labeled_system.post_func
-            ls.post_funcs.get_plugin(post_f)(ls)
+# Normalize geometry through an ibrav=0 input, then let dpdata's public reader
+# parse labels and apply its coordinate/force/virial rotations consistently.
+function _read_qe_labels(outname, symbols, coords, box; nopbc=false)
+    mktempdir() do dir
+        input = joinpath(dir, "geometry.in")
+        open(input, "w") do io
+            println(io, "&SYSTEM\n  ibrav = 0,\n/\nCELL_PARAMETERS angstrom")
+            for row in eachrow(box)
+                println(io, join(row, " "))
+            end
+            println(io, "\nATOMIC_POSITIONS angstrom")
+            for (symbol, row) in zip(symbols, eachrow(coords))
+                println(io, symbol, " ", join(row, " "))
+            end
+            println(io)
         end
+        ls = dpdata.LabeledSystem(pylist([input, abspath(outname)]); fmt="qe/pw/scf")
+        ls.data["nopbc"] = nopbc
+        return ls
     end
-    
-    return ls
 end
 
-function getdplabeledsystem_qescf(
-        outname, system::AbstractSystem
-    )
-    outlines = readlines(outname)
-    fmtobj = dpdata.system.load_format("qe/pw/scf")
-    
-    atom_names, natoms, types, cell, coords = _getdpsystemdata(system)
-    energy = dpdata.qe.scf.get_energy(outlines)
-    force = dpdata.qe.scf.get_force(outlines, natoms)
-    stress = dpdata.qe.scf.get_stress(outlines) * np.linalg.det(cell)
+"""
+    getlabeledsystemdp_qescf(outname; inname=...)
 
-    data = pydict()
-    (
-            data["atom_names"],
-            data["atom_numbs"],
-            data["atom_types"],
-            data["cells"],
-            data["coords"],
-            data["orig"],
-            data["energies"],
-            data["forces"],
-            data["virials"],
-    ) = (
-        atom_names,
-        natoms,
-        types,
-        cell[np.newaxis, pycolon, pycolon],
-        coords[np.newaxis, pycolon, pycolon],
-        np.array([0, 0, 0]),
-        np.array(energy)[np.newaxis],
-        force[np.newaxis, pycolon, pycolon],
-        stress[np.newaxis, pycolon, pycolon],
+Read a QE SCF input/output pair. ASE reads the input geometry; dpdata's public
+reader handles energy, forces, optional virial, and cell rotation. Labels use
+eV, eV/Å, and eV. The default replaces `out` with `in` in the basename, leaving directories intact.
+"""
+function getlabeledsystemdp_qescf(
+        outname; inname=joinpath(dirname(outname), replace(basename(outname), "out" => "in"))
     )
+    atoms = pyimport("ase.io").read(inname; format="espresso-in")
+    symbols = pyconvert(Vector{String}, atoms.get_chemical_symbols())
+    coords = pyconvert(Matrix{Float64}, atoms.get_positions())
+    box = pyconvert(Matrix{Float64}, atoms.cell.array)
+    return _read_qe_labels(outname, symbols, coords, box)
+end
 
-    ls = dpdata.LabeledSystem(;data)
-    if pyhasattr(fmtobj.from_labeled_system, "post_func")
-        for post_f in fmtobj.from_labeled_system.post_func
-            ls.post_funcs.get_plugin(post_f)(ls)
-        end
-    end
-    
-    return ls
+"""
+    getdplabeledsystem_qescf(outname, system)
+
+Read QE SCF labels using an AtomsBase system as the input geometry.
+"""
+function getdplabeledsystem_qescf(outname, system::AbstractSystem)
+    nopbc = _nonperiodic(system)
+    symbols = string.(Symbol.(atomic_symbol(system, :)))
+    coords = stack([ustrip.(u"Å", r) for r in position(system, :)]; dims=1)
+    box = stack([ustrip.(u"Å", v) for v in cell_vectors(system)]; dims=1)
+    return _read_qe_labels(outname, symbols, coords, box; nopbc)
 end
 
 function getlabeledsystemdp_qescf!(ls::Py, outname; kwargs...)

@@ -1,0 +1,15 @@
+Synthetic QE SCF output for parser regression tests (no DFT calculation).
+!    total energy              =     -10.00000000 Ry
+
+     Forces acting on atoms (cartesian axes, Ry/au):
+
+     atom    1 type  1   force =     0.01000000    0.02000000    0.03000000
+     atom    2 type  2   force =    -0.01000000   -0.02000000   -0.03000000
+     atom    3 type  1   force =     0.00000000    0.00000000    0.00000000
+
+     total   stress  (Ry/bohr**3)                   (kbar)     P=       1.00
+     0.0 0.0 0.0   1.0 0.0 0.0
+     0.0 0.0 0.0   0.0 2.0 0.0
+     0.0 0.0 0.0   0.0 0.0 3.0
+
+     JOB DONE.
