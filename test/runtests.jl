@@ -10,10 +10,11 @@ using PythonCall
         @test pyhasattr(pyimport("ase.io"), "read")
         @test pyhasattr(DeepMD.DeepPotPy, "eval")
     end
+
     include("helpers.jl")
     include("atomsbase.jl")
-    include("potential.jl")
     include("splitting.jl")
+    include("potential.jl")
     include("qe.jl")
     include("calculator.jl")
 end
