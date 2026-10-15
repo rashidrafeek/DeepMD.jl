@@ -1,17 +1,25 @@
+# DeePMD supports fully periodic or fully nonperiodic systems.
+function _nonperiodic(sys::AbstractSystem)
+    pbc = periodicity(sys)
+    (all(pbc) || !any(pbc)) || throw(ArgumentError("Mixed periodicity is unsupported by DeePMD."))
+    return !any(pbc)
+end
+
 """
     _getdpsystemdata(system::AbstractSystem)
 
 Get all data to create a dpdata System object from an AbstractSystem.
 """
 function _getdpsystemdata(system::AbstractSystem)
+    isempty(system) && throw(ArgumentError("Cannot convert an empty atomic system."))
     cell = np.array(stack(map(cell_vectors(system)) do vec
         ustrip.(u"Å", vec)
     end; dims=1))
-    coords = np.array(stack(map(position(system)) do vec
+    coords = np.array(stack(map(position(system, :)) do vec
         ustrip.(u"Å", vec)
     end; dims=1))
 
-    atsymbols = atomic_symbol(system)
+    atsymbols = Symbol.(atomic_symbol(system, :))
     unq_atsymbols = unique(atsymbols)
 
     atom_names = pylist(string.(unq_atsymbols))
@@ -47,11 +55,15 @@ function getdpsystem(system::AbstractSystem)
         np.array([0, 0, 0])
     )
 
+    data["nopbc"] = _nonperiodic(system)
     dpsys = dpdata.System(;data)
 
     return dpsys
 end
-function getdpsystem(systems::Vector{<:AbstractSystem})
+function getdpsystem(systems::AbstractVector{<:AbstractSystem})
+    isempty(systems) && throw(ArgumentError("Provide at least one system."))
+    all(s -> _nonperiodic(s) == _nonperiodic(first(systems)), systems) ||
+        throw(ArgumentError("Cannot combine periodic and nonperiodic frames."))
     dpsystems = getdpsystem.(systems)
     dpsys = first(dpsystems)
     nsys = length(dpsystems)

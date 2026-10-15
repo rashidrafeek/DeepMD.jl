@@ -1,6 +1,7 @@
 module DeepMD
 
 using PythonCall
+import AtomsBase
 using AtomsBase: AbstractSystem, AtomView, element
 import AtomsBase: cell_vectors, periodicity, atomic_symbol, velocity,
                   atomic_number, atomic_mass, atomkeys, hasatomkey

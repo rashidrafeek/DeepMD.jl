@@ -5,7 +5,7 @@ struct DPLabeledSystem <: AbstractSystem{3}
             error("Given object is not a valid `LabeledSystem` and has type $(pytype(ls)).")
         end
         if length(ls) != 1
-            error("Multiple frames exist in the provided system.")
+            error("Expected exactly one frame in the provided system.")
         end
         new(ls)
     end
@@ -15,18 +15,22 @@ function cell_vectors(lssys::DPLabeledSystem)
     ls = lssys.ls
     cellvecs = pyconvert(Vector{Vector{Float64}}, ls.data["cells"][0]) .* u"Å"
 
-    return cellvecs
+    return Tuple(SVector{3}.(cellvecs))
 end
-periodicity(::DPLabeledSystem) = (true, true, true)
+periodicity(sys::DPLabeledSystem) = ntuple(_ -> !pyconvert(Bool, sys.ls.data.get("nopbc", false)), 3)
+AtomsBase.cell(sys::DPLabeledSystem) = AtomsBase.PeriodicCell(; cell_vectors=cell_vectors(sys), periodicity=periodicity(sys))
 Base.length(lssys::DPLabeledSystem) = length(lssys.ls.data["coords"][0])
 Base.size(lssys::DPLabeledSystem) = (length(lssys),)
 
-Base.getindex(sys::DPLabeledSystem, i::Integer)  = AtomView(sys, i)
+function Base.getindex(sys::DPLabeledSystem, i::Integer)
+    1 <= i <= length(sys) || throw(BoundsError(sys, i))
+    return AtomView(sys, i)
+end
 function Base.position(lssys::DPLabeledSystem)
     ls = lssys.ls
     posvecs = pyconvert(Vector{Vector{Float64}}, ls.data["coords"][0]) .* u"Å"
 
-    return posvecs
+    return SVector{3}.(posvecs)
 end
 function atomic_symbol(lssys::DPLabeledSystem)
     ls = lssys.ls
@@ -58,6 +62,7 @@ velocity(::DPLabeledSystem) = missing
 
 # System property access
 function Base.getindex(lssys::DPLabeledSystem, x::Symbol)
+    haskey(lssys, x) || throw(KeyError(x))
     ls = lssys.ls
     if x === :cell_vectors
         cell_vectors(lssys)
@@ -73,19 +78,28 @@ function Base.getindex(lssys::DPLabeledSystem, x::Symbol)
         throw(KeyError(x))
     end
 end
-Base.haskey(::DPLabeledSystem, x::Symbol) = x in (
-    :cell_vectors, :periodicity, :energy, :force, :virial
+const _label_keys = (:energy => "energies", :force => "forces", :virial => "virials")
+Base.keys(sys::DPLabeledSystem) = (
+    :cell_vectors, :periodicity,
+    (key for (key, field) in _label_keys if pyconvert(Bool, sys.ls.data.__contains__(field)))...,
 )
-Base.keys(::DPLabeledSystem) = (
-    :cell_vectors, :periodicity, :energy, :force, :virial
-)
+Base.haskey(sys::DPLabeledSystem, key::Symbol) = key in keys(sys)
+
+# AtomsBase 0.5 indexed interface; retain the existing unindexed helpers.
+Base.position(sys::DPLabeledSystem, i) = position(sys)[i]
+AtomsBase.species(sys::DPLabeledSystem, i) = AtomsBase.ChemicalSpecies.(atomic_symbol(sys))[i]
+AtomsBase.mass(sys::DPLabeledSystem, i) = atomic_mass(sys)[i]
 
 # Atom and atom property access
-atomkeys(::DPLabeledSystem) = (:position, :atomic_symbol, :atomic_number, :atomic_mass, :force)
+atomkeys(sys::DPLabeledSystem) = (:position, :species, :mass, :atomic_symbol, :atomic_number, :atomic_mass, (haskey(sys, :force) ? (:force,) : ())...)
 hasatomkey(system::DPLabeledSystem, x::Symbol) = x in atomkeys(system)
 function Base.getindex(lssys::DPLabeledSystem, i::Union{Integer,AbstractVector,Colon}, x::Symbol)
     if x === :position
         position(lssys)[i]
+    elseif x === :species
+        AtomsBase.species(lssys, i)
+    elseif x === :mass
+        AtomsBase.mass(lssys, i)
     elseif x === :atomic_symbol
         atomic_symbol(lssys)[i]
     elseif x === :atomic_number

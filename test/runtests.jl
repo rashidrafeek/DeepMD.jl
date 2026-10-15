@@ -10,4 +10,6 @@ using PythonCall
         @test pyhasattr(pyimport("ase.io"), "read")
         @test pyhasattr(DeepMD.DeepPotPy, "eval")
     end
+    include("helpers.jl")
+    include("atomsbase.jl")
 end
