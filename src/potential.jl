@@ -13,7 +13,7 @@ struct DeepPotential
         new(dp)
     end
 end
-DeepPotential(path::String) = DeepPotential(DeepPotPy(path))
+DeepPotential(path::AbstractString) = DeepPotential(DeepPotPy(path))
 
 #
 # Functions
@@ -22,12 +22,16 @@ DeepPotential(path::String) = DeepPotential(DeepPotPy(path))
 function predict_data(sys::AbstractSystem, deeppot::DeepPotential)
     type_map = pyconvert(Vector{Symbol}, deeppot.dp.get_type_map())
 
-    coord = stack(ustrip.(position(sys)); dims=1)
-    cell = stack(ustrip.(cell_vectors(sys)); dims=1)
-    symbols = Symbol.(atomic_symbol(sys))
-    atype = findfirst.(.==(symbols), Ref(type_map)) .- 1
+    isempty(sys) && throw(ArgumentError("Cannot evaluate an empty system."))
+    coord = stack([ustrip.(u"Å", r) for r in position(sys, :)]; dims=1)
+    cell = _nonperiodic(sys) ? nothing :
+        stack([ustrip.(u"Å", v) for v in cell_vectors(sys)]; dims=1)
+    symbols = Symbol.(atomic_symbol(sys, :))
+    unknown = setdiff(symbols, type_map)
+    isempty(unknown) || throw(ArgumentError("Species absent from model type map: $(join(unknown, ", "))."))
+    atype = [findfirst(==(symbol), type_map) - 1 for symbol in symbols]
 
-    energy, force, virial_stress = deeppot.dp.eval(coord, cell, atype)
+    return deeppot.dp.eval(np.array(coord), isnothing(cell) ? nothing : np.array(cell), np.array(atype; dtype="int32"))
 end
 
 function energy_and_force(sys::AbstractSystem, deeppot::DeepPotential)
@@ -40,6 +44,12 @@ function energy_and_force(sys::AbstractSystem, deeppot::DeepPotential)
     return (; e, f)
 end
 
+"""
+    virial_stress(sys, potential)
+
+Legacy six-component **virial**, in hartree, ordered `(xx, yy, zz, zy, zx, yx)`.
+This is not volume-normalized stress. Prefer `AtomsCalculators.virial` for a matrix.
+"""
 function virial_stress(sys::AbstractSystem, deeppot::DeepPotential)
     _, _, virial_stress = predict_data(sys, deeppot)
     vi_mat = first(virial_stress.reshape((1,3,3)))
