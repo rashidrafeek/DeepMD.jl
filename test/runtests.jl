@@ -15,4 +15,5 @@ using PythonCall
     include("potential.jl")
     include("splitting.jl")
     include("qe.jl")
+    include("calculator.jl")
 end

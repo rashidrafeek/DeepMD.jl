@@ -1,6 +1,7 @@
 module DeepMD
 
 using PythonCall
+import AtomsCalculators
 import AtomsBase
 using AtomsBase: AbstractSystem, AtomView, element
 import AtomsBase: cell_vectors, periodicity, atomic_symbol, velocity,
@@ -8,10 +9,7 @@ import AtomsBase: cell_vectors, periodicity, atomic_symbol, velocity,
 using Unitful: @u_str, ustrip, uconvert
 import UnitfulAtomic
 import Random
-using StaticArrays: SVector, @SVector
-# Not compatible with AtomsBase 0.5
-# using InteratomicPotentials: AbstractPotential               
-# import InteratomicPotentials: energy_and_force, virial_stress
+using StaticArrays: SVector, SMatrix, @SVector
 
 const deepmd = PythonCall.pynew()
 const dpdata = PythonCall.pynew()
@@ -37,5 +35,6 @@ include("utils.jl")
 
 export DeepPotential
 include("potential.jl")
+include("calculator.jl")
 
 end
