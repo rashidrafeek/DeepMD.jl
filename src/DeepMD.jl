@@ -7,7 +7,7 @@ import AtomsBase: cell_vectors, periodicity, atomic_symbol, velocity,
                   atomic_number, atomic_mass, atomkeys, hasatomkey
 using Unitful: @u_str, ustrip, uconvert
 import UnitfulAtomic
-using StatsBase: sample
+import Random
 using StaticArrays: SVector, @SVector
 # Not compatible with AtomsBase 0.5
 # using InteratomicPotentials: AbstractPotential               

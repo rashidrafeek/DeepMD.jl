@@ -179,27 +179,34 @@ function split_trainvalidtest_data(
 
     split_trainvalidtest_data(ls, ratios; kwargs...)
 end
-function split_trainvalidtest_data(
-        ls::Py, ratios=(0.7, 0.2, 0.1)
-    )
-    nframes = length(ls)
-    
-    @assert sum(ratios) ≈ 1 "Total ratios should add to 1"
-    
-    index_training = sample(0:(nframes-1), Int(ceil(nframes * ratios[1])); replace=false)
-    index_remaining = filter(!in(index_training), 0:(nframes-1))
-    if iszero(ratios[3]) # Take all other indices if no test data is required
-        index_validation = copy(index_remaining)
-        index_testing = Int[]
-    else
-        index_validation = sample(index_remaining, Int(ceil(nframes * ratios[2])); replace=false)
-        index_testing = filter(!in(index_validation), index_remaining)
-    end 
-    
-    # @show length.([index_training, index_validation, index_testing])
-    ls_training = ls.sub_system(index_training)
-    ls_validation = ls.sub_system(index_validation)
-    ls_testing = ls.sub_system(index_testing)
+"""
+    split_trainvalidtest_data(ls, ratios=(0.7, 0.2, 0.1); rng=Random.default_rng(), shuffle=true)
 
-    (; ls_training, ls_validation, ls_testing)
+Split frames without overlap. Counts use largest-remainder allocation (ties prefer
+training, then validation). Pass an RNG for reproducibility, or `shuffle=false`
+to retain contiguous trajectory blocks. Zero ratios always receive zero frames.
+"""
+function split_trainvalidtest_data(
+        ls::Py, ratios=(0.7, 0.2, 0.1); rng=Random.default_rng(), shuffle=true
+    )
+    length(ratios) == 3 || throw(ArgumentError("Provide three split ratios."))
+    all(r -> r isa Real && isfinite(r) && r >= 0, ratios) ||
+        throw(ArgumentError("Split ratios must be finite and nonnegative."))
+    isapprox(sum(ratios), 1) || throw(ArgumentError("Split ratios must sum to one."))
+    nframes = length(ls)
+    expected = nframes .* collect(ratios) ./ sum(ratios)
+    counts = floor.(Int, expected)
+    order = sortperm(1:3; by=i -> (-(expected[i] - counts[i]), i))
+    for i in order[1:(nframes - sum(counts))]
+        counts[i] += 1
+    end
+    indices = collect(0:(nframes - 1))
+    shuffle && Random.shuffle!(rng, indices)
+    ntrain, nvalid, _ = counts
+    # Explicit NumPy integer arrays also work for empty selections.
+    subset(ids) = ls.sub_system(np.array(ids; dtype="int64"))
+    ls_training = subset(indices[1:ntrain])
+    ls_validation = subset(indices[(ntrain + 1):(ntrain + nvalid)])
+    ls_testing = subset(indices[(ntrain + nvalid + 1):end])
+    return (; ls_training, ls_validation, ls_testing)
 end

@@ -13,4 +13,5 @@ using PythonCall
     include("helpers.jl")
     include("atomsbase.jl")
     include("potential.jl")
+    include("splitting.jl")
 end
