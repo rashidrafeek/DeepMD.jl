@@ -17,11 +17,10 @@ Requires Julia 1.10+. Python and CPU dependencies install automatically on first
 use; no separate conda installation is needed. The first load requires internet.
 For GPU use, configure a compatible environment through
 [PythonCall/CondaPkg](https://juliapy.github.io/PythonCall.jl/stable/pythoncall/#Configuration).
-Upstream Linux wheels may print CUDA probe messages during successful CPU use.
 
 ## Evaluate a model
 
-Add the example's dependencies with
+Add the packages required for this example with
 `Pkg.add(["AtomsBase", "AtomsCalculators", "Unitful"])`.
 
 ```julia
@@ -41,10 +40,6 @@ result.virial  # 3×3 matrix, eV; NOT volume-normalized stress
 
 Inputs accept any Unitful length unit. Systems must be fully periodic or
 nonperiodic, and all elements must appear in the model's type map.
-
-Legacy `DeepMD.energy_and_force` returns `(e, f)` in hartree and hartree/bohr.
-`DeepMD.virial_stress` returns a virial in hartree, ordered
-`(xx, yy, zz, zy, zx, yx)`.
 
 ## Data conversion and splitting
 
